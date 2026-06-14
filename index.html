@@ -98,12 +98,14 @@ body{display:flex;flex-direction:column;min-height:100dvh}
 .section-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;padding-left:2px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .card+.card{margin-top:10px}
-.chart-wrap{position:relative;height:200px}
-.chart-wrap-md{position:relative;height:240px}
-.chart-wrap-lg{position:relative;height:300px}
+.chart-wrap{position:relative;height:200px;overflow:hidden}
+.chart-wrap-md{position:relative;height:240px;overflow:hidden}
+.chart-wrap-lg{position:relative;height:300px;overflow:hidden}
+canvas{max-width:100%!important;display:block}
 
-/* ─── GRID 2 ─────────────────────────────────────────────── */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* ─── GRID 2 — siempre vertical en móvil ────────────────── */
+.grid2{display:flex;flex-direction:column;gap:10px}
+@media(min-width:640px){.grid2{display:grid;grid-template-columns:1fr 1fr}}
 
 /* ─── PLAYERS LIST ───────────────────────────────────────── */
 .player-item{
