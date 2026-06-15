@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mundial 2026 — Partidos Internacionales</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+<nav id="top-nav"></nav>
+
+<div id="page">
+  <!-- Summary Metrics Cards -->
+  <div class="summary-row" id="summary-row" style="margin-top: 14px;"></div>
+
+  <!-- Top Caps Chart -->
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Jugadores con más partidos internacionales (Caps)</div>
+      <div class="chart-wrap-lg"><canvas id="chart-caps-global"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Selections Ranking by Average Caps -->
+  <div class="section" style="margin-bottom: 4px;">
+    <div class="card" style="padding:16px 16px 8px">
+      <div class="section-title" id="rank-title">Ranking — Caps medios por selección</div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="shared.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const all=TEAMS.flatMap(t=>t.players);
+  const allCaps=all.map(p=>p.caps);
+  const mostCaps=all.reduce((a,b)=>a.caps>b.caps?a:b);
+  const teamOf=p=>TEAMS.find(t=>t.players.includes(p))?.name||'';
+
+  // Render Summary
+  document.getElementById('summary-row').innerHTML = `
+    <div class="sum-card" style="grid-column: span 2;">
+      <div class="sum-big" style="color:var(--red)">${mostCaps.caps}<small style="font-size:14px"> caps</small></div>
+      <div class="sum-lbl">Récord individual (Mundial)</div>
+      <div class="sum-detail">${mostCaps.name} (${teamOf(mostCaps)}) · Media global: ${r1(avg(allCaps))} caps</div>
+    </div>
+  `;
+
+  // Render Top 15 Players globally by caps
+  const topCapsGlobal = [...all].sort((a,b)=>b.caps-a.caps).slice(0, 15);
+
+  new Chart(document.getElementById('chart-caps-global'), {
+    type: 'bar',
+    data: {
+      labels: topCapsGlobal.map(p => p.name),
+      datasets: [{
+        data: topCapsGlobal.map(p => p.caps),
+        backgroundColor: '#2A398D',
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const p = topCapsGlobal[c.dataIndex];
+              const t = TEAMS.find(x => x.players.includes(p));
+              return ` ${p.name} (${t ? t.code : ''}): ${c.raw} caps`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#f2f2f2' }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#333' } }
+      }
+    }
+  });
+
+  // Render Selections Ranking by Average Caps
+  const sorted = [...TEAMS].sort((a,b) => b.avgCaps - a.avgCaps);
+  const max = sorted[0].avgCaps, min = sorted[sorted.length-1].avgCaps;
+  
+  document.getElementById('rank-list').innerHTML = sorted.map((t,i)=>{
+    const norm = max===min ? 1 : (t.avgCaps-min)/(max-min);
+    const color = `rgb(${Math.round(230*norm + 42*(1-norm))},${Math.round(29*norm + 57*(1-norm))},${Math.round(37*norm + 141*(1-norm))})`;
+    const pct = Math.round(norm*100);
+    return `
+      <div class="rank-item">
+        <span class="rank-n">${i+1}</span>
+        <span class="rank-code">${t.code}</span>
+        <span class="rank-label">${t.name}</span>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="rank-val">${t.avgCaps} caps</span>
+      </div>
+    `;
+  }).join('');
+});
+</script>
+</body>
+</html>

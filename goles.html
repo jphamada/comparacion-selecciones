@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mundial 2026 — Goles</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+<nav id="top-nav"></nav>
+
+<div id="page">
+  <!-- Summary Metrics Cards -->
+  <div class="summary-row" id="summary-row" style="margin-top: 14px;"></div>
+
+  <!-- Top Goalscorers Chart -->
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Máximos goleadores internacionales</div>
+      <div class="chart-wrap-lg"><canvas id="chart-goals-global"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Selections Ranking by Total Goals -->
+  <div class="section" style="margin-bottom: 4px;">
+    <div class="card" style="padding:16px 16px 8px">
+      <div class="section-title" id="rank-title">Ranking — Goles totales por selección</div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="shared.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const all=TEAMS.flatMap(t=>t.players);
+  const topGoal=all.reduce((a,b)=>a.goals>b.goals?a:b);
+  const teamOf=p=>TEAMS.find(t=>t.players.includes(p))?.name||'';
+  const totalGoalsWorldCup=all.reduce((s,p)=>s+p.goals,0);
+
+  // Render Summary
+  document.getElementById('summary-row').innerHTML = `
+    <div class="sum-card" style="grid-column: span 2;">
+      <div class="sum-big" style="color:var(--red)">${topGoal.goals}<small style="font-size:14px"> goles</small></div>
+      <div class="sum-lbl">Máximo goleador histórico activo</div>
+      <div class="sum-detail">${topGoal.name} (${teamOf(topGoal)}) · Goles totales sumados: ${totalGoalsWorldCup}</div>
+    </div>
+  `;
+
+  // Render Top 15 players globally by goals
+  const topGoalsGlobal = [...all].sort((a,b)=>b.goals-a.goals).slice(0, 15);
+
+  new Chart(document.getElementById('chart-goals-global'), {
+    type: 'bar',
+    data: {
+      labels: topGoalsGlobal.map(p => p.name),
+      datasets: [{
+        data: topGoalsGlobal.map(p => p.goals),
+        backgroundColor: '#E61D25',
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const p = topGoalsGlobal[c.dataIndex];
+              const t = TEAMS.find(x => x.players.includes(p));
+              return ` ${p.name} (${t ? t.code : ''}): ${c.raw} goles`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#f2f2f2' }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#333' } }
+      }
+    }
+  });
+
+  // Render Selections Ranking by Total Goals
+  const sorted = [...TEAMS].sort((a,b) => b.totalGoals - a.totalGoals);
+  const max = sorted[0].totalGoals, min = sorted[sorted.length-1].totalGoals;
+  
+  document.getElementById('rank-list').innerHTML = sorted.map((t,i)=>{
+    const norm = max===min ? 1 : (t.totalGoals-min)/(max-min);
+    const color = `rgb(${Math.round(230*norm + 42*(1-norm))},${Math.round(29*(1-norm) + 29*norm)},${Math.round(141*(1-norm) + 37*norm)})`;
+    const pct = Math.round(norm*100);
+    return `
+      <div class="rank-item">
+        <span class="rank-n">${i+1}</span>
+        <span class="rank-code">${t.code}</span>
+        <span class="rank-label">${t.name}</span>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="rank-val">${t.totalGoals} goles</span>
+      </div>
+    `;
+  }).join('');
+});
+</script>
+</body>
+</html>

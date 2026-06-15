@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mundial 2026 — Edades</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+<nav id="top-nav"></nav>
+
+<div id="page">
+  <!-- Summary Metrics Cards -->
+  <div class="summary-row" id="summary-row" style="margin-top: 14px;"></div>
+
+  <!-- Global Age Distribution Chart -->
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Distribución de edades — todos los jugadores</div>
+      <div class="chart-wrap-lg"><canvas id="chart-age-total"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Team Averages Ranking -->
+  <div class="section" style="margin-bottom: 4px;">
+    <div class="card" style="padding:16px 16px 8px">
+      <div class="section-title" id="rank-title">Ranking — Edad media por selección</div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="shared.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const all=TEAMS.flatMap(t=>t.players);
+  const allAges=all.map(p=>p.age);
+  
+  // Render Summary
+  document.getElementById('summary-row').innerHTML = `
+    <div class="sum-card" style="grid-column: span 2;">
+      <div class="sum-big" style="color:var(--blue)">${r1(avg(allAges))}<small style="font-size:14px"> años</small></div>
+      <div class="sum-lbl">Edad media global</div>
+      <div class="sum-detail">Jugador más joven: ${Math.min(...allAges)} años · Más veterano: ${Math.max(...allAges)} años</div>
+    </div>
+  `;
+
+  // Render Global Age Distribution Bar Chart
+  const ageTot={};
+  all.forEach(p=>{const b=Math.floor(p.age/2)*2; ageTot[b]=(ageTot[b]||0)+1;});
+  const atK=Object.keys(ageTot).sort((a,b)=>parseInt(a)-parseInt(b));
+  
+  new Chart(document.getElementById('chart-age-total'),{
+    type:'bar',
+    data:{
+      labels:atK.map(k=>`${k}-${parseInt(k)+1}`),
+      datasets:[{
+        data:atK.map(k=>ageTot[k]),
+        backgroundColor:'#2A398D',
+        borderRadius:4,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9}}},
+        y:{beginAtZero:true,grid:{color:'#f2f2f2'},ticks:{font:{size:9}}}
+      }
+    }
+  });
+
+  // Render Selections Ranking by Average Age
+  const sorted = [...TEAMS].sort((a,b) => b.avgAge - a.avgAge);
+  const max = sorted[0].avgAge, min = sorted[sorted.length-1].avgAge;
+  
+  document.getElementById('rank-list').innerHTML = sorted.map((t,i)=>{
+    const norm = max===min ? 1 : (t.avgAge-min)/(max-min);
+    const color = `rgb(${Math.round(231*norm+42*(1-norm))},${Math.round(29*norm+57*(1-norm))},${Math.round(37*norm+141*(1-norm))})`;
+    const pct = Math.round(norm*100);
+    return `
+      <div class="rank-item">
+        <span class="rank-n">${i+1}</span>
+        <span class="rank-code">${t.code}</span>
+        <span class="rank-label">${t.name}</span>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="rank-val">${t.avgAge} años</span>
+      </div>
+    `;
+  }).join('');
+});
+</script>
+</body>
+</html>

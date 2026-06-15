@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mundial 2026 — Alturas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+<nav id="top-nav"></nav>
+
+<div id="page">
+  <!-- Summary Metrics Cards -->
+  <div class="summary-row" id="summary-row" style="margin-top: 14px;"></div>
+
+  <!-- Height vs Age Scatter Chart -->
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Edad media vs. Altura media</div>
+      <div class="chart-wrap-lg"><canvas id="chart-scatter"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Global Height Distribution Chart -->
+  <div class="section">
+    <div class="card">
+      <div class="section-title">Distribución global de altura (cm)</div>
+      <div class="chart-wrap-md"><canvas id="chart-height-total"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Team Averages Ranking -->
+  <div class="section" style="margin-bottom: 4px;">
+    <div class="card" style="padding:16px 16px 8px">
+      <div class="section-title" id="rank-title">Ranking — Altura media por selección</div>
+      <div id="rank-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="shared.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const all=TEAMS.flatMap(t=>t.players);
+  const allHts=all.map(p=>p.height);
+  
+  // Render Summary
+  document.getElementById('summary-row').innerHTML = `
+    <div class="sum-card" style="grid-column: span 2;">
+      <div class="sum-big" style="color:var(--green)">${r1(avg(allHts))}<small style="font-size:14px"> cm</small></div>
+      <div class="sum-lbl">Altura media global</div>
+      <div class="sum-detail">Jugador más bajo: ${Math.min(...allHts)} cm · Más alto: ${Math.max(...allHts)} cm</div>
+    </div>
+  `;
+
+  // Scatter
+  const sd=TEAMS.map(t=>({x:t.avgAge,y:t.avgHeight,label:t.code}));
+  new Chart(document.getElementById('chart-scatter'),{
+    type:'scatter',
+    data:{datasets:[{data:sd,backgroundColor:'rgba(42,57,141,0.7)',pointRadius:6,pointHoverRadius:9}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.label}: ${c.raw.x}a · ${c.raw.y}cm`}}},
+      scales:{
+        x:{title:{display:true,text:'Edad media',font:{size:11}},grid:{color:'#f2f2f2'},ticks:{font:{size:10}}},
+        y:{title:{display:true,text:'Altura (cm)',font:{size:11}},grid:{color:'#f2f2f2'},ticks:{font:{size:10}}}
+      }
+    }
+  });
+
+  // Global Height Distribution Histogram
+  const hTot={};
+  all.forEach(p=>{const b=Math.floor(p.height/5)*5; hTot[b]=(hTot[b]||0)+1;});
+  const htK=Object.keys(hTot).sort((a,b)=>parseInt(a)-parseInt(b));
+  
+  new Chart(document.getElementById('chart-height-total'),{
+    type:'bar',
+    data:{
+      labels:htK.map(k=>`${k}-${parseInt(k)+4}`),
+      datasets:[{
+        data:htK.map(k=>hTot[k]),
+        backgroundColor:'#3CAC3B',
+        borderRadius:4,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9}}},
+        y:{beginAtZero:true,grid:{color:'#f2f2f2'},ticks:{font:{size:9}}}
+      }
+    }
+  });
+
+  // Render Selections Ranking by Average Height
+  const sorted = [...TEAMS].sort((a,b) => b.avgHeight - a.avgHeight);
+  const max = sorted[0].avgHeight, min = sorted[sorted.length-1].avgHeight;
+  
+  document.getElementById('rank-list').innerHTML = sorted.map((t,i)=>{
+    const norm = max===min ? 1 : (t.avgHeight-min)/(max-min);
+    const color = `rgb(${Math.round(42*(1-norm)+230*norm)},${styleHeightGreen(norm)},${Math.round(141*(1-norm)+30*norm)})`;
+    const pct = Math.round(norm*100);
+    return `
+      <div class="rank-item">
+        <span class="rank-n">${i+1}</span>
+        <span class="rank-code">${t.code}</span>
+        <span class="rank-label">${t.name}</span>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="rank-val">${t.avgHeight} cm</span>
+      </div>
+    `;
+  }).join('');
+  
+  function styleHeightGreen(norm) {
+    // Return green gradient tone
+    return Math.round(57*(1-norm) + 172*norm);
+  }
+});
+</script>
+</body>
+</html>
